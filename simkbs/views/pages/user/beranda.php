@@ -13,11 +13,50 @@ $sql_s1 = $mysqli->query("SELECT * FROM tabel_kependudukan JOIN tabel_pendidikan
 $sql_s2 = $mysqli->query("SELECT * FROM tabel_kependudukan JOIN tabel_pendidikan ON tabel_kependudukan.NIK = tabel_pendidikan.NIK WHERE tabel_pendidikan.PENDIDIKAN_TERAKHIR='S2 dan Sederajat'");
 $sql_s3 = $mysqli->query("SELECT * FROM tabel_kependudukan JOIN tabel_pendidikan ON tabel_kependudukan.NIK = tabel_pendidikan.NIK WHERE tabel_pendidikan.PENDIDIKAN_TERAKHIR='S3 dan Sederajat'");
 // $total_ds1 = mysqli_num_rows($sql_diploma) + mysqli_num_rows($sql_s1);
+$sql_count_pekerjaan = $mysqli->query("SELECT pekerjaan, count(pekerjaan) AS jumlah FROM tabel_pekerjaan
+WHERE NOT pekerjaan='--Pilih Pekerjaan--'
+GROUP BY pekerjaan ;");
+
+$sql_count_pendidikan = $mysqli->query("SELECT pendidikan_terakhir, count(pendidikan_terakhir) AS jumlah FROM tabel_pendidikan
+WHERE NOT pendidikan_terakhir='--Pilih Pendidikan--'
+GROUP BY pendidikan_terakhir ;");
+
+$sql_count_jenis_kelamin = $mysqli->query("SELECT 
+COALESCE(
+    CASE 
+        WHEN jk = 1 THEN 'Laki-Laki' 
+        WHEN jk = 2 THEN 'Perempuan' 
+    END,
+    'Total'
+) AS jenis_kelamin, 
+COUNT(*) AS jumlah_penduduk
+FROM 
+tabel_kependudukan 
+GROUP BY 
+jk 
+WITH ROLLUP;");
+
+$sql_count_umur = $mysqli->query("SELECT 'Bayi' AS kategori_umur, COUNT(*) AS jumlah FROM tabel_kependudukan WHERE TAHUN BETWEEN 0 AND 4
+UNION ALL
+SELECT 'Anak' AS kategori_umur, COUNT(*) AS jumlah FROM tabel_kependudukan WHERE TAHUN BETWEEN 5 AND 11
+UNION ALL
+SELECT 'Remaja' AS kategori_umur, COUNT(*) AS jumlah FROM tabel_kependudukan WHERE TAHUN BETWEEN 12 AND 25
+UNION ALL
+SELECT 'Dewasa' AS kategori_umur, COUNT(*) AS jumlah FROM tabel_kependudukan WHERE TAHUN BETWEEN 26 AND 45
+UNION ALL
+SELECT 'Lansia' AS kategori_umur, COUNT(*) AS jumlah FROM tabel_kependudukan WHERE TAHUN > 45");
+
+$sql_count_agama = $mysqli->query("SELECT AGAMA, COUNT(*) AS jumlah FROM tabel_kependudukan WHERE AGAMA IN ('islam', 'kristen', 'katolik', 'budha', 'hindu', 'khonghucu') GROUP BY AGAMA");
+
+$sql_count_dusun = $mysqli->query("SELECT b.dusun, COUNT(*) AS jumlah FROM tabel_kependudukan a
+LEFT JOIN tabel_dusun b ON a.DSN = b.id
+GROUP BY b.dusun");
 ?>
+
+
 
 <!-- ======= Hero Section ======= -->
 <section id="hero" class="d-flex align-items-center">
-
     <div class="container">
         <div class="row gy-4">
             <div class="col-lg-6 order-2 order-lg-1 d-flex flex-column justify-content-center">
@@ -126,7 +165,7 @@ $sql_s3 = $mysqli->query("SELECT * FROM tabel_kependudukan JOIN tabel_pendidikan
                     <div class="row justify-content-center">
                         <div class="col-lg-6 text-center">
                             <h2>Cari Informasi Penerima Bantuan</h2>
-                            
+
                             <!-- pencarian -->
                             <form class="d-flex custom-search" action="search" method="GET">
                                 <input class="form-control me-2" type="number" name="nik" placeholder="Masukan NIK Kepala Keluarga" aria-label="Search" required>
@@ -180,30 +219,7 @@ $sql_s3 = $mysqli->query("SELECT * FROM tabel_kependudukan JOIN tabel_pendidikan
             </div>
 
             <div class="row justify-content-center">
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/laki@4x-8.png" alt=""></div>
-                        <h4 class="title"><a href="">Laki-laki</a></h4>
-                        <p class="description">Jumlah laki-laki yang berada di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_pria); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="200">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/perempuan@4x-8.png" alt=""></div>
-                        <h4 class="title"><a href="">Perempuan</a></h4>
-                        <p class="description">Jumlah perempuan yang berada di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_wanita); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="300">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/total@4x-8.png" alt=""></div>
-                        <h4 class="title"><a href="">Total</a></h4>
-                        <p class="description">Jumlah total laki-laki dan perempuan yang berada di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_total); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
+                <canvas id="chart-jk"></canvas>
             </div>
 
         </div>
@@ -220,78 +236,7 @@ $sql_s3 = $mysqli->query("SELECT * FROM tabel_kependudukan JOIN tabel_pendidikan
             </div>
 
             <div class="row justify-content-center">
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/belumsekolah@4x-8.png" alt=""></div>
-                        <h4 class="title"><a href="">Belum Sekolah</a></h4>
-                        <p class="description">Jumlah penduduk yang belum sekolah di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_belum_sekolah); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/putussekolah@4x-8.png" alt=""></div>
-                        <h4 class="title"><a href="">Tidak Tamat SD</a></h4>
-                        <p class="description">Jumlah penduduk yang tidak tamat SD di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_tidak_tamat_sd); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/sd_1@4x-8.png" alt=""></div>
-                        <h4 class="title"><a href="">Tamat SD/Sederajat</a></h4>
-                        <p class="description">Jumlah penduduk yang tamat SD/Sederajat di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_sd); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/smp@4x-8.png" alt=""></div>
-                        <h4 class="title"><a href="">SLTP/Sederajat</a></h4>
-                        <p class="description">Jumlah penduduk yang tamat SLTP/Sederajat di Desa Butu adalah <b><?= mysqli_num_rows($sql_smp); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/sma@4x-8.png" alt=""></div>
-                        <h4 class="title"><a href="">SLTA/Sederajat</a></h4>
-                        <p class="description">Jumlah penduduk yang tamat SLTA/Sederajat di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_sma); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/study/d3@4x-8.png" alt=""></div>
-                        <h4 class="title"><a href="">Diploma 1-3</a></h4>
-                        <p class="description">Jumlah penduduk yang Diploma 1-3 di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_diploma); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/study/s1@4x-8.png" alt=""></div>
-                        <h4 class="title"><a href="">Strata 1</a></h4>
-                        <p class="description">Jumlah penduduk yang Strata 1 di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_s1); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/study/s2@4x-8.png" alt=""></div>
-                        <h4 class="title"><a href="">Strata 2</a></h4>
-                        <p class="description">Jumlah penduduk yang Strata 2 di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_s2); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/study/s3@4x-8.png" alt=""></div>
-                        <h4 class="title"><a href="">Strata 3</a></h4>
-                        <p class="description">Jumlah penduduk yang Strata di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_s3); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
+                <canvas id="chart-pendidikan"></canvas>
             </div>
 
         </div>
@@ -326,120 +271,8 @@ $sql_s3 = $mysqli->query("SELECT * FROM tabel_kependudukan JOIN tabel_pendidikan
             $sql_perdesa = $mysqli->query("SELECT * FROM tabel_kependudukan JOIN tabel_pekerjaan ON tabel_kependudukan.NIK = tabel_pekerjaan.NIK WHERE tabel_pekerjaan.PEKERJAAN='Perangkat Desa'");
             $sql_tki = $mysqli->query("SELECT * FROM tabel_kependudukan JOIN tabel_pekerjaan ON tabel_kependudukan.NIK = tabel_pekerjaan.NIK WHERE tabel_pekerjaan.PEKERJAAN='TKI'");
             ?>
-
             <div class="row justify-content-center">
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/belumberkerja@4x-8.png" alt=""></div>
-                        <h4 class="title"><a href="">Belum/Tidak Berkerja</a></h4>
-                        <p class="description">Jumlah penduduk yang belum/tidak berkerja di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_blmbekerja); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/job/petani.png" alt="" class="mt-3 mb-4" width="50%"></div>
-                        <h4 class="title"><a href="">Petani/Pekebun</a></h4>
-                        <p class="description">Jumlah penduduk yang berkerja sebagai Petani/Pekebun di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_petani); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/job/buruh_tani.png" alt="" class="mt-3 mb-4" width="50%"></div>
-                        <h4 class="title"><a href="">Buruh Tani</a></h4>
-                        <p class="description">Jumlah penduduk yang berkerja sebagai Buruh Tani di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_buruh_tani); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/job/buruh_kebun.png" alt="" class="mt-3 mb-4" width="50%"></div>
-                        <h4 class="title"><a href="">Buruh Perkebunan</a></h4>
-                        <p class="description">Jumlah penduduk yang berkerja sebagai Buruh Perkebunan di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_buruh_kebun); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/job/buruh_bangunan.png" alt="" class="mt-3 mb-4" width="50%"></div>
-                        <h4 class="title"><a href="">Buruh Bangunan</a></h4>
-                        <p class="description">Jumlah penduduk yang berkerja sebagai Buruh Bangunan di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_buruh_bangunan); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/job/nelayan.png" alt="" class="mt-3 mb-4" width="50%"></div>
-                        <h4 class="title"><a href="">Nelayan</a></h4>
-                        <p class="description">Jumlah penduduk yang berkerja sebagai Nelayan di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_nelayan); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/job/pedagang.png" alt="" class="mt-3 mb-4" width="50%"></div>
-                        <h4 class="title"><a href="">Pedagang Kecil</a></h4>
-                        <p class="description">Jumlah penduduk yang berkerja sebagai Pedagang di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_pedagang_kecil); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/job/pedagang.png" alt="" class="mt-3 mb-4" width="50%"></div>
-                        <h4 class="title"><a href="">Pedagang Besar</a></h4>
-                        <p class="description">Jumlah penduduk yang berkerja sebagai Pedagang di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_pedagang_besar); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/job/industry.png" alt="" class="mt-3 mb-4" width="50%"></div>
-                        <h4 class="title"><a href="">Industri</a></h4>
-                        <p class="description">Jumlah penduduk yang berkerja sebagai Industri di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_industri); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/job/guru.png" alt="" class="mt-3 mb-4" width="50%"></div>
-                        <h4 class="title"><a href="">Guru</a></h4>
-                        <p class="description">Jumlah penduduk yang berkerja sebagai Guru di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_guru); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/job/pns.png" alt="" class="mt-3 mb-4" width="50%"></div>
-                        <h4 class="title"><a href="">PNS</a></h4>
-                        <p class="description">Jumlah penduduk yang berkerja sebagai PNS di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_pns); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/job/pensiunan.png" alt="" class="mt-3 mb-4" width="50%"></div>
-                        <h4 class="title"><a href="">Pensiunan</a></h4>
-                        <p class="description">Jumlah penduduk yang berkerja sebagai Pensiunan di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_pensiun); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/job/perangkat_desa.png" alt="" class="mt-3 mb-4" width="50%"></div>
-                        <h4 class="title"><a href="">Perangkat Desa</a></h4>
-                        <p class="description">Jumlah penduduk yang berkerja sebagai Perangkat Desa di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_perdesa); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/job/TKI.png" alt="" class="mt-3 mb-4" width="50%"></div>
-                        <h4 class="title"><a href="">TKI</a></h4>
-                        <p class="description">Jumlah penduduk yang berkerja sebagai TKI di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_tki); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
+                <canvas id="chart-pekerjaan"></canvas>
             </div>
 
         </div>
@@ -467,45 +300,7 @@ $sql_s3 = $mysqli->query("SELECT * FROM tabel_kependudukan JOIN tabel_pendidikan
             ?>
 
             <div class="row justify-content-center">
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/bayi_1@4x-8.png" alt=""></div>
-                        <h4 class="title"><a href="">Bayi</a></h4>
-                        <p class="description">Jumlah bayi yang berada di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_umur_bayi); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/anak@4x-8.png" alt=""></div>
-                        <h4 class="title"><a href="">Anak-anak</a></h4>
-                        <p class="description">Jumlah anak-anak yang berada di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_umur_anak); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/remaja_1@4x-8.png" alt=""></div>
-                        <h4 class="title"><a href="">Remaja</a></h4>
-                        <p class="description">Jumlah remaja yang berada di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_umur_remaja); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/dewasa_1@4x-8.png" alt=""></div>
-                        <h4 class="title"><a href="">Dewasa</a></h4>
-                        <p class="description">Jumlah orang dewasa yang berada adi <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_umur_dewasa); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/orang tua_1@4x-8.png" alt=""></div>
-                        <h4 class="title"><a href="">Lansia</a></h4>
-                        <p class="description">Jumlah orang tua yang berada di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_umur_lansia); ?></b> Jiwa</p>
-                    </div>
-                </div>
+                <canvas id="chart-umur"></canvas>
             </div>
 
         </div>
@@ -533,55 +328,7 @@ $sql_s3 = $mysqli->query("SELECT * FROM tabel_kependudukan JOIN tabel_pendidikan
             ?>
 
             <div class="row justify-content-center">
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/religion/islam.png" alt="" class="p-3" width="50%"></div>
-                        <h4 class="title"><a href="">Islam</a></h4>
-                        <p class="description">Jumlah orang yang memeluk agama Islam di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_islam); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/religion/christian.png" alt="" class="p-3" width="50%"></div>
-                        <h4 class="title"><a href="">Kristen</a></h4>
-                        <p class="description">Jumlah orang yang memeluk agama Kristen di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_kristen); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/religion/christian.png" alt="" class="p-3" width="50%"></div>
-                        <h4 class="title"><a href="">Katolik</a></h4>
-                        <p class="description">Jumlah orang yang memeluk agama Kristen di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_katolik); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon">
-                            <img src="<?= $base_url; ?>asset_user/img/4x/religion/buddhism.png" alt="" class="p-3" width="50%">
-                        </div>
-                        <h4 class="title"><a href="">Budha</a></h4>
-                        <p class="description">Jumlah orang yang memeluk agama Kristen di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_budha); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/religion/hinduism.png" alt="" class="p-3" width="50%"></div>
-                        <h4 class="title"><a href="">Hindu</a></h4>
-                        <p class="description">Jumlah orang yang memeluk agama Kristen di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_hindu); ?></b> Jiwa</p>
-                    </div>
-                </div>
-
-                <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                    <div class="icon-box">
-                        <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/religion/confucianism.png" alt="" class="p-3" width="50%"></div>
-                        <h4 class="title"><a href="">Khonghucu</a></h4>
-                        <p class="description">Jumlah orang yang memeluk agama Kristen di <?= $row_profil->nama_desa; ?> adalah <b><?= mysqli_num_rows($sql_khonghucu); ?></b> Jiwa</p>
-                    </div>
-                </div>
+                <canvas id="chart-agama"></canvas>
             </div>
 
         </div>
@@ -601,29 +348,7 @@ $sql_s3 = $mysqli->query("SELECT * FROM tabel_kependudukan JOIN tabel_pendidikan
             </div>
 
             <div class="row justify-content-center">
-                <?php
-                $query_dusun = $mysqli->query("SELECT * FROM tabel_dusun");
-                while ($rows_dusun = $query_dusun->fetch_assoc()) {
-                ?>
-                    <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
-                        <div class="icon-box">
-                            <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/dusun_1@4x-8.png" alt=""></div>
-                            <h4 class="title"><a href=""><?= $rows_dusun['dusun']; ?></a></h4>
-                            <p class="description">
-                                Jumlah penduduk yang berada di <?= $rows_dusun['dusun']; ?> di <?= $row_profil->nama_desa; ?> adalah
-                                <b>
-                                    <?php
-                                    $tot_dusun = $mysqli->query("SELECT * FROM tabel_kependudukan WHERE DSN='$rows_dusun[id]'");
-                                    echo mysqli_num_rows($tot_dusun);
-                                    ?>
-                                </b>
-                                Jiwa
-                            </p>
-                        </div>
-                    </div>
-                <?php
-                }
-                ?>
+                <canvas id="chart-dusun"></canvas>
             </div>
 
         </div>
@@ -663,14 +388,319 @@ $sql_s3 = $mysqli->query("SELECT * FROM tabel_kependudukan JOIN tabel_pendidikan
                         </div>
                         <div class="col-md-8">
                             <div class="info">
-                                <iframe link="https://www.google.com/maps/place/Perning,+Jetis,+Mojokerto+Regency,+East+Java/@-7.407482,112.4845825,15z/data=!3m1!4b1!4m6!3m5!1s0x2e780efb93e960f3:0x4200f8a855cdf07d!8m2!3d-7.4078783!4d112.4842789!16s%2Fg%2F1214fywvss>" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
+                                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d9887.829379943943!2d112.4845825!3d-7.407482!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e780efb93e960f3%3A0x4200f8a855cdf07d!2sPerning%2C%20Jetis%2C%20Mojokerto%20Regency%2C%20East%20Java!5e0!3m2!1sen!2sid!4v1621074426231!5m2!1sen!2sid" width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy"></iframe>
                             </div>
                         </div>
+
                     </div>
                 </div>
             </div>
 
         </div>
     </section><!-- End Contact Us Section -->
+    <?php
+    $data_count_pekerjaan = array();
+    while ($row = mysqli_fetch_array($sql_count_pekerjaan)) {
+        $data_count_pekerjaan[$row['pekerjaan']] = $row['jumlah'];
+    }
+    ?>
 
+    <?php
+    $data_count_pendidikan = array();
+    while ($row = mysqli_fetch_array($sql_count_pendidikan)) {
+        $data_count_pendidikan[$row['pendidikan_terakhir']] = $row['jumlah'];
+    }
+    ?>
+
+    <?php
+    $data_count_jk = array();
+    while ($row = mysqli_fetch_array($sql_count_jenis_kelamin)) {
+        $data_count_jk[$row['jenis_kelamin']] = $row['jumlah_penduduk'];
+    }
+
+    // print_r($data_count_jk);
+    ?>
+
+    <?php
+    $data_count_umur = array();
+    while ($row = mysqli_fetch_array($sql_count_umur)) {
+        $data_count_umur[$row['kategori_umur']] = $row['jumlah'];
+    }
+
+    ?>
+
+    <?php
+    $data_count_agama = array();
+    while ($row = mysqli_fetch_array($sql_count_agama)) {
+        $data_count_agama[$row['AGAMA']] = $row['jumlah'];
+    }
+    ?>
+
+    <?php
+    $data_count_dusun = array();
+    while ($row = mysqli_fetch_array($sql_count_dusun)) {
+        $data_count_dusun[$row['dusun']] = $row['jumlah'];
+    }
+    print_r($data_count_dusun)
+    ?>
 </main><!-- End #main -->
+<script>
+    var dataPekerjaan = {
+        labels: [<?php foreach ($data_count_pekerjaan as $key => $value) {
+                        echo '"' . $key . '",';
+                    } ?>],
+        datasets: [{
+            label: "Jumlah yang bekerja",
+            data: [<?php foreach ($data_count_pekerjaan as $key => $value) {
+                        echo '"' . $value . '",';
+                    } ?>],
+            backgroundColor: "rgba(54, 162, 235, 0.5)",
+            borderColor: "rgb(54, 162, 235)",
+            borderWidth: 1,
+        }, ],
+    };
+
+    var optionsPekerjaan = {
+        responsive: true,
+        maintainAspectRatio: false,
+        legend: {
+            display: false,
+        },
+        plugins: {
+            title: {
+                display: true,
+                text: "Grafik Data Pekerjaan",
+            },
+        },
+        scales: {
+            yAxes: [{
+                ticks: {
+                    beginAtZero: true,
+                },
+            }, ],
+        },
+    };
+
+    var ctxPekerjaan = document.getElementById("chart-pekerjaan").getContext("2d");
+    var chartPekerjaan = new Chart(ctxPekerjaan, {
+        type: "bar",
+        data: dataPekerjaan,
+        options: optionsPekerjaan,
+    });
+
+    var dataPendidikan = {
+        labels: [<?php foreach ($data_count_pendidikan as $key => $value) {
+                        echo '"' . $key . '",';
+                    } ?>],
+        datasets: [{
+            label: "Jumlah yang menempuh pendidikan",
+            data: [<?php foreach ($data_count_pendidikan as $key => $value) {
+                        echo '"' . $value . '",';
+                    } ?>],
+            backgroundColor: "rgba(54, 162, 235, 0.5)",
+            borderColor: "rgb(54, 162, 235)",
+            borderWidth: 1,
+        }, ],
+    };
+
+    var optionsPendidikan = {
+        responsive: true,
+        maintainAspectRatio: false,
+        legend: {
+            display: false,
+        },
+        plugins: {
+            title: {
+                display: true,
+                text: "Grafik Data Pendidikan",
+            },
+        },
+        scales: {
+            yAxes: [{
+                ticks: {
+                    beginAtZero: true,
+                },
+            }, ],
+        },
+    };
+
+    var ctxPendidikan = document.getElementById("chart-pendidikan").getContext("2d");
+    var chartPendidikan = new Chart(ctxPendidikan, {
+        type: "bar",
+        data: dataPendidikan,
+        options: optionsPendidikan,
+    });
+
+    var dataJk = {
+        labels: [<?php foreach ($data_count_jk as $key => $value) {
+                        echo '"' . $key . '",';
+                    } ?>],
+        datasets: [{
+            label: "Jumlah",
+            data: [<?php foreach ($data_count_jk as $key => $value) {
+                        echo '"' . $value . '",';
+                    } ?>],
+            backgroundColor: "rgba(54, 162, 235, 0.5)",
+            borderColor: "rgb(54, 162, 235)",
+            borderWidth: 1,
+        }, ],
+    };
+
+    var optionsJk = {
+        responsive: true,
+        maintainAspectRatio: false,
+        legend: {
+            display: false,
+        },
+        plugins: {
+            title: {
+                display: true,
+                text: "Grafik Data Jenis Kelamin",
+            },
+        },
+        scales: {
+            yAxes: [{
+                ticks: {
+                    beginAtZero: true,
+                },
+            }, ],
+        },
+    };
+
+    var ctxJk = document.getElementById("chart-jk").getContext("2d");
+    var chartJk = new Chart(ctxJk, {
+        type: "bar",
+        data: dataJk,
+        options: optionsJk,
+    });
+
+    var dataUmur = {
+        labels: [<?php foreach ($data_count_umur as $key => $value) {
+                        echo '"' . $key . '",';
+                    } ?>],
+        datasets: [{
+            label: "Jumlah",
+            data: [<?php foreach ($data_count_umur as $key => $value) {
+                        echo '"' . $value . '",';
+                    } ?>],
+            backgroundColor: "rgba(54, 162, 235, 0.5)",
+            borderColor: "rgb(54, 162, 235)",
+            borderWidth: 1,
+        }, ],
+    };
+
+    var optionsUmur = {
+        responsive: true,
+        maintainAspectRatio: false,
+        legend: {
+            display: false,
+        },
+        plugins: {
+            title: {
+                display: true,
+                text: "Grafik Data Umur",
+            },
+        },
+        scales: {
+            yAxes: [{
+                ticks: {
+                    beginAtZero: true,
+                },
+            }, ],
+        },
+    };
+
+    var ctxUmur = document.getElementById("chart-umur").getContext("2d");
+    var chartUmur = new Chart(ctxUmur, {
+        type: "bar",
+        data: dataUmur,
+        options: optionsUmur,
+    });
+
+
+    var dataAgama = {
+        labels: [<?php foreach ($data_count_agama as $key => $value) {
+                        echo '"' . $key . '",';
+                    } ?>],
+        datasets: [{
+            label: "Jumlah",
+            data: [<?php foreach ($data_count_agama as $key => $value) {
+                        echo '"' . $value . '",';
+                    } ?>],
+            backgroundColor: "rgba(54, 162, 235, 0.5)",
+            borderColor: "rgb(54, 162, 235)",
+            borderWidth: 1,
+        }, ],
+    };
+
+    var optionsAgama = {
+        responsive: true,
+        maintainAspectRatio: false,
+        legend: {
+            display: false,
+        },
+        plugins: {
+            title: {
+                display: true,
+                text: "Grafik Data Agama",
+            },
+        },
+        scales: {
+            yAxes: [{
+                ticks: {
+                    beginAtZero: true,
+                },
+            }, ],
+        },
+    };
+
+    var ctxAgama = document.getElementById("chart-agama").getContext("2d");
+    var chartAgama = new Chart(ctxAgama, {
+        type: "bar",
+        data: dataAgama,
+        options: optionsAgama,
+    });
+
+    var dataDusun = {
+        labels: [<?php foreach ($data_count_dusun as $key => $value) {
+                        echo '"' . $key . '",';
+                    } ?>],
+        datasets: [{
+            label: "Jumlah",
+            data: [<?php foreach ($data_count_dusun as $key => $value) {
+                        echo '"' . $value . '",';
+                    } ?>],
+            backgroundColor: "rgba(54, 162, 235, 0.5)",
+            borderColor: "rgb(54, 162, 235)",
+            borderWidth: 1,
+        }, ],
+    };
+
+    var optionsDusun = {
+        responsive: true,
+        maintainAspectRatio: false,
+        legend: {
+            display: false,
+        },
+        plugins: {
+            title: {
+                display: true,
+                text: "Grafik Data Dusun",
+            },
+        },
+        scales: {
+            yAxes: [{
+                ticks: {
+                    beginAtZero: true,
+                },
+            }, ],
+        },
+    };
+
+    var ctxDusun = document.getElementById("chart-dusun").getContext("2d");
+    var chartDusun = new Chart(ctxDusun, {
+        type: "bar",
+        data: dataDusun,
+        options: optionsDusun,
+    });
+</script>

@@ -34,6 +34,9 @@
   <!-- Template Main CSS File -->
   <link href="<?= $base_url; ?>asset_user/css/style.css" rel="stylesheet">
 
+  <!-- chartjs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
   <!-- =======================================================
   * Template Name: Ninestars - v4.1.0
   * Template URL: https://bootstrapmade.com/ninestars-free-bootstrap-3-theme-for-creative/
