@@ -53,6 +53,29 @@ LEFT JOIN tabel_dusun b ON a.DSN = b.id
 GROUP BY b.dusun");
 ?>
 
+<style>
+    /* Style untuk tombol WhatsApp */
+    .whatsapp-button {
+        position: fixed;
+        bottom: 20px;
+        left: 20px;
+        z-index: 9999;
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background-color: #25d366;
+        color: #fff;
+        text-align: center;
+        font-size: 24px;
+        line-height: 60px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .whatsapp-button:hover {
+        background-color: #128c7e;
+    }
+</style>
 
 
 <!-- ======= Hero Section ======= -->
@@ -219,7 +242,7 @@ GROUP BY b.dusun");
             </div>
 
             <div class="row justify-content-center">
-                <canvas id="chart-jk"></canvas>
+                <canvas id="chart-jk" height="10vh" width="20vw"></canvas>
             </div>
 
         </div>
@@ -348,7 +371,29 @@ GROUP BY b.dusun");
             </div>
 
             <div class="row justify-content-center">
-                <canvas id="chart-dusun"></canvas>
+                <?php
+                $query_dusun = $mysqli->query("SELECT * FROM tabel_dusun");
+                while ($rows_dusun = $query_dusun->fetch_assoc()) {
+                ?>
+                    <div class="col-md-6 col-lg-3 d-flex align-items-stretch" data-aos="zoom-in" data-aos-delay="100">
+                        <div class="icon-box">
+                            <div class="icon"><img src="<?= $base_url; ?>asset_user/img/4x/dusun_1@4x-8.png" alt=""></div>
+                            <h4 class="title"><a href=""><?= $rows_dusun['dusun']; ?></a></h4>
+                            <p class="description">
+                                Jumlah penduduk yang berada di <?= $rows_dusun['dusun']; ?> di <?= $row_profil->nama_desa; ?> adalah
+                                <b>
+                                    <?php
+                                    $tot_dusun = $mysqli->query("SELECT * FROM tabel_kependudukan WHERE DSN='$rows_dusun[id]'");
+                                    echo mysqli_num_rows($tot_dusun);
+                                    ?>
+                                </b>
+                                Jiwa
+                            </p>
+                        </div>
+                    </div>
+                <?php
+                }
+                ?>
             </div>
 
         </div>
@@ -441,9 +486,14 @@ GROUP BY b.dusun");
     while ($row = mysqli_fetch_array($sql_count_dusun)) {
         $data_count_dusun[$row['dusun']] = $row['jumlah'];
     }
-    print_r($data_count_dusun)
     ?>
+
+    <a href="https://wa.me/6285732067403" class="whatsapp-button" target="_blank">
+        <i class="fab fa-whatsapp"></i>
+    </a>
+
 </main><!-- End #main -->
+<script src="https://kit.fontawesome.com/a076d05399.js"></script>
 <script>
     var dataPekerjaan = {
         labels: [<?php foreach ($data_count_pekerjaan as $key => $value) {
@@ -454,9 +504,9 @@ GROUP BY b.dusun");
             data: [<?php foreach ($data_count_pekerjaan as $key => $value) {
                         echo '"' . $value . '",';
                     } ?>],
-            backgroundColor: "rgba(54, 162, 235, 0.5)",
+            backgroundColor: ["rgb(255, 99, 132)", "rgb(255, 159, 64)", "rgb(255, 205, 86)", "rgb(75, 192, 192)", "rgb(54, 162, 235)", "rgb(153, 102, 255)", "rgb(201, 203, 207)", "rgb(255, 99, 132)", "rgb(255, 159, 64)", "rgb(255, 205, 86)"],
             borderColor: "rgb(54, 162, 235)",
-            borderWidth: 1,
+            borderWidth: 1
         }, ],
     };
 
@@ -497,7 +547,7 @@ GROUP BY b.dusun");
             data: [<?php foreach ($data_count_pendidikan as $key => $value) {
                         echo '"' . $value . '",';
                     } ?>],
-            backgroundColor: "rgba(54, 162, 235, 0.5)",
+            backgroundColor: ["rgb(255, 99, 132)", "rgb(255, 159, 64)", "rgb(255, 205, 86)", "rgb(75, 192, 192)", "rgb(54, 162, 235)", "rgb(153, 102, 255)", "rgb(201, 203, 207)", "rgb(255, 99, 132)", "rgb(255, 159, 64)", "rgb(255, 205, 86)"],
             borderColor: "rgb(54, 162, 235)",
             borderWidth: 1,
         }, ],
@@ -540,7 +590,7 @@ GROUP BY b.dusun");
             data: [<?php foreach ($data_count_jk as $key => $value) {
                         echo '"' . $value . '",';
                     } ?>],
-            backgroundColor: "rgba(54, 162, 235, 0.5)",
+            backgroundColor: ["rgb(255, 99, 132)", "rgb(255, 159, 64)", "rgb(255, 205, 86)"],
             borderColor: "rgb(54, 162, 235)",
             borderWidth: 1,
         }, ],
@@ -583,7 +633,7 @@ GROUP BY b.dusun");
             data: [<?php foreach ($data_count_umur as $key => $value) {
                         echo '"' . $value . '",';
                     } ?>],
-            backgroundColor: "rgba(54, 162, 235, 0.5)",
+            backgroundColor: ["rgb(255, 99, 132)", "rgb(255, 159, 64)", "rgb(255, 205, 86)", "rgb(75, 192, 192)", "rgb(54, 162, 235)", ],
             borderColor: "rgb(54, 162, 235)",
             borderWidth: 1,
         }, ],
@@ -627,7 +677,7 @@ GROUP BY b.dusun");
             data: [<?php foreach ($data_count_agama as $key => $value) {
                         echo '"' . $value . '",';
                     } ?>],
-            backgroundColor: "rgba(54, 162, 235, 0.5)",
+            backgroundColor: ["rgb(255, 99, 132)", "rgb(255, 159, 64)", "rgb(255, 205, 86)", "rgb(75, 192, 192)", "rgb(54, 162, 235)", "rgb(153, 102, 255)", "rgb(201, 203, 207)", "rgb(255, 99, 132)", "rgb(255, 159, 64)", "rgb(255, 205, 86)"],
             borderColor: "rgb(54, 162, 235)",
             borderWidth: 1,
         }, ],
@@ -670,7 +720,7 @@ GROUP BY b.dusun");
             data: [<?php foreach ($data_count_dusun as $key => $value) {
                         echo '"' . $value . '",';
                     } ?>],
-            backgroundColor: "rgba(54, 162, 235, 0.5)",
+            backgroundColor: ["rgb(255, 99, 132)", "rgb(255, 159, 64)", "rgb(255, 205, 86)", "rgb(75, 192, 192)", "rgb(54, 162, 235)", "rgb(153, 102, 255)", "rgb(201, 203, 207)"],
             borderColor: "rgb(54, 162, 235)",
             borderWidth: 1,
         }, ],
